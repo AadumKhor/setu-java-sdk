@@ -11,7 +11,7 @@ public class SetuJwtHelper {
     private String schemedId;
     private String secret;
 
-    public SetuJwtHelper(String secret, String schemedId) {
+    public SetuJwtHelper(String schemedId, String secret) {
         this.schemedId = schemedId;
         this.secret = secret;
     }

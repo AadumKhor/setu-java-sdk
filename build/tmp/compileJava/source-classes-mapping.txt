@@ -1,11 +1,11 @@
 exceptions/RequestException.java
  exceptions.RequestException
-SetuJwtHelper.java
- SetuJwtHelper
-exceptions/SetuException.java
- exceptions.SetuException
 exceptions/AuthException.java
  exceptions.AuthException
+exceptions/SetuException.java
+ exceptions.SetuException
+SetuJwtHelper.java
+ SetuJwtHelper
 Main.java
  Main
 SetuRequestHelper.java
