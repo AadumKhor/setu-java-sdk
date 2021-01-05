@@ -16,20 +16,22 @@ public class SetuJwtHelper {
         this.secret = secret;
     }
 
-    public void setSchemedId(String schemedId) {
-        this.schemedId = schemedId;
-    }
-
-    public void setSecret(String secret) {
-        this.secret = secret;
-    }
+//    public void setSchemedId(String schemedId) {
+//        this.schemedId = schemedId;
+//    }
+//
+//    public void setSecret(String secret) {
+//        this.secret = secret;
+//    }
 
     public String yieldBearerToken() {
         Algorithm algorithm = Algorithm.HMAC256(this.secret);
+        Date iat = new Date();
+        String uid = UUID.randomUUID().toString();
         String token = JWT.create()
-                .withAudience(this.schemedId)
-                .withIssuedAt(new Date())
-                .withClaim("jti", UUID.randomUUID().toString())
+                .withAudience(schemedId)
+                .withIssuedAt(iat)
+                .withClaim("jti", uid)
                 .sign(algorithm);
         return "Bearer " + token;
     }

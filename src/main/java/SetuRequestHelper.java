@@ -1,8 +1,7 @@
 import exceptions.RequestException;
+import okhttp3.*;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -15,22 +14,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SetuRequestHelper {
+    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final String PROD_URL = "https://prod.setu.co/api";
     private static final String SANDBOX_URL = "https://sandbox.setu.co/api";
-
-    private final String schemeId;
-    private final String secret;
     private final String productionInstance;
     private final Boolean isProduction;
 
     private final SetuJwtHelper jwtHelper;
 
     public SetuRequestHelper(String schemeId, String secret, String productInstance, Boolean isProduction) {
-        this.schemeId = schemeId;
-        this.secret = secret;
         this.productionInstance = productInstance;
         this.isProduction = isProduction;
-        jwtHelper = new SetuJwtHelper(this.schemeId, this.secret);
+        jwtHelper = new SetuJwtHelper(schemeId, secret);
     }
 
     private URL getURL(String path) throws MalformedURLException {
@@ -48,12 +43,12 @@ public class SetuRequestHelper {
     private String validationRules(String exactness, double amount) {
         String exactUp = "{\"amount\": " +
                 "{\"maximum\" : \"0\", " +
-                "\"minimum\": \"" + amount +
-                "\"}";
+                "\"minimum\": " + amount +
+                "}}";
         String exactDown = "{\"amount\":" +
                 " {\"minimum\" : \"0\"," +
-                " \"maximum\": \"" + amount +
-                "\"}";
+                " \"maximum\": " + amount +
+                "}}";
 
         if (exactness.equals("EXACT_UP")) {
             return exactUp;
@@ -74,72 +69,73 @@ public class SetuRequestHelper {
         for (Map.Entry<String, String> me : headers.entrySet()) {
             connection.setRequestProperty(me.getKey(), me.getValue());
         }
-        connection.setRequestMethod(method);
         connection.setRequestProperty("Content-Type", "application/json; utf-8");
+        connection.setRequestMethod(method);
+        connection.setDoInput(true);
         connection.setDoOutput(true);
         return connection;
     }
 
-    public HashMap<String, String> generateLink(double amount,
-                                                int expiresInDays,
-                                                String payeeName,
-                                                String refId,
-                                                String exactness) throws IOException {
-        HashMap<String, String> res = new HashMap<>();
+    public String generateLink(int amount,
+                               int expiresInDays,
+                               String payeeName,
+                               String refId,
+                               String exactness) throws IOException {
         String path = "/payment-links";
         URL url = getURL(path);
         LocalDateTime expiryDate = LocalDateTime.now().plusDays(expiresInDays);
-
         // input json
         String jsonInputString = "{" +
-                "\"amount\": {\"currencyCode\" : \"INR\", \"value\": \"" + amount + "\"}," +
+                "\"amount\": {\"currencyCode\" : \"INR\", \"value\": " + amount + "}," +
                 "\"amountExactness\": \"" + exactness + "\"," +
                 "\"billerBillID\": \"" + refId + "\"," +
                 "\"dueDate\": \"" + expiryDate.toString() + "Z\"," +
                 "\"expiryDate\": \"" + expiryDate.toString() + "Z\"," +
-                "\"name\": \"" + payeeName + "\"," +
-                "\"validationRules\": " + validationRules(exactness, amount) +
-                "}";
-        System.out.println(jsonInputString);
-        HttpURLConnection connection = defaultConnection(url, "POST");
+                "\"name\": \"" + payeeName + "\"";
 
-        // provide request body
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        } catch (Exception e) {
-            e.printStackTrace();
+
+        if (!exactness.equals("EXACT")) {
+            jsonInputString += ",\"validationRules\": " + validationRules(exactness, amount);
         }
+        jsonInputString += "}";
+//        System.out.println(jsonInputString);
+//        System.out.println(RequestBody.create(JSON, jsonInputString).toString());
+        StringBuilder res = new StringBuilder();
+        OkHttpClient okHttpClient = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Authorization", jwtHelper.yieldBearerToken())
+                .header("Content-Type", "application/json")
+                .header("X-Setu-Product-Instance-ID", productionInstance)
+                .post(RequestBody.create(JSON, jsonInputString))
+                .build();
 
-        System.out.println("Request made");
-
-        // read the response in json format
-        try (BufferedReader br =
-                     new BufferedReader(
-                             new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
+        // making the request
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
             }
 
-            System.out.println(response.toString());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return res;
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                try {
+                    res.append(response.body().string());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new IOException();
+                }
+
+            }
+        });
+        return res.toString().equals("") ? "Nothing" : res.toString();
     }
 
     public HashMap<String, String> checkStatus(String platformBillId) throws IOException {
         String path = "/payment-links/" + platformBillId;
         URL url = getURL(path);
-        HashMap<String, String> headers = generateSetuHeaders();
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        for (Map.Entry<String, String> me : headers.entrySet()) {
-            connection.setRequestProperty(me.getKey(), me.getValue());
-        }
-        connection.setRequestMethod("GET");
-
+        HttpURLConnection connection = defaultConnection(url, "GET");
         // output in json format
 
         return new HashMap<>();
