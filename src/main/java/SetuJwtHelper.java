@@ -16,14 +16,6 @@ public class SetuJwtHelper {
         this.secret = secret;
     }
 
-//    public void setSchemedId(String schemedId) {
-//        this.schemedId = schemedId;
-//    }
-//
-//    public void setSecret(String secret) {
-//        this.secret = secret;
-//    }
-
     public String yieldBearerToken() {
         Algorithm algorithm = Algorithm.HMAC256(this.secret);
         Date iat = new Date();

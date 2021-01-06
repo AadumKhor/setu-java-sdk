@@ -41,14 +41,8 @@ public class SetuRequestHelper {
     }
 
     private String validationRules(String exactness, double amount) {
-        String exactUp = "{\"amount\": " +
-                "{\"maximum\" : \"0\", " +
-                "\"minimum\": " + amount +
-                "}}";
-        String exactDown = "{\"amount\":" +
-                " {\"minimum\" : \"0\"," +
-                " \"maximum\": " + amount +
-                "}}";
+        String exactUp = "{\"amount\": " + "{\"maximum\" : \"0\", " + "\"minimum\": " + amount + "}}";
+        String exactDown = "{\"amount\":" + " {\"minimum\" : \"0\"," + " \"maximum\": " + amount + "}}";
 
         if (exactness.equals("EXACT_UP")) {
             return exactUp;
@@ -76,94 +70,64 @@ public class SetuRequestHelper {
         return connection;
     }
 
-    public String generateLink(int amount,
-                               int expiresInDays,
-                               String payeeName,
-                               String refId,
-                               String exactness) throws IOException {
+    public String generateLink(int amount, int expiresInDays, String payeeName, String refId, String exactness)
+            throws IOException {
+        StringBuilder res = new StringBuilder();
         String path = "/payment-links";
         URL url = getURL(path);
         LocalDateTime expiryDate = LocalDateTime.now().plusDays(expiresInDays);
         // input json
-        String jsonInputString = "{" +
-                "\"amount\": {\"currencyCode\" : \"INR\", \"value\": " + amount + "}," +
-                "\"amountExactness\": \"" + exactness + "\"," +
-                "\"billerBillID\": \"" + refId + "\"," +
-                "\"dueDate\": \"" + expiryDate.toString() + "Z\"," +
-                "\"expiryDate\": \"" + expiryDate.toString() + "Z\"," +
-                "\"name\": \"" + payeeName + "\"";
-
+        String jsonInputString = "{" + "\"amount\": {\"currencyCode\" : \"INR\", \"value\": " + amount + "},"
+                + "\"amountExactness\": \"" + exactness + "\"," + "\"billerBillID\": \"" + refId + "\","
+                + "\"dueDate\": \"" + expiryDate.toString() + "Z\"," + "\"expiryDate\": \"" + expiryDate.toString()
+                + "Z\"," + "\"name\": \"" + payeeName + "\"";
 
         if (!exactness.equals("EXACT")) {
             jsonInputString += ",\"validationRules\": " + validationRules(exactness, amount);
         }
         jsonInputString += "}";
-//        System.out.println(jsonInputString);
-//        System.out.println(RequestBody.create(JSON, jsonInputString).toString());
-        StringBuilder res = new StringBuilder();
-        OkHttpClient okHttpClient = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(url)
-                .header("Authorization", jwtHelper.yieldBearerToken())
-                .header("Content-Type", "application/json")
-                .header("X-Setu-Product-Instance-ID", productionInstance)
-                .post(RequestBody.create(JSON, jsonInputString))
+        OkHttpClient client = new OkHttpClient().newBuilder().build();
+        RequestBody body = RequestBody.create(JSON, jsonInputString);
+        Request request = new Request.Builder().url("https://sandbox.setu.co/api/payment-links").method("POST", body)
+                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
+                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
                 .build();
-
-        // making the request
-        Call call = okHttpClient.newCall(request);
-        call.enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                try {
-                    res.append(response.body().string());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw new IOException();
-                }
-
-            }
-        });
-        return res.toString().equals("") ? "Nothing" : res.toString();
+        Response response = client.newCall(request).execute();
+        return response.body().string();
     }
 
-    public HashMap<String, String> checkStatus(String platformBillId) throws IOException {
+    public String checkStatus(String platformBillId) throws IOException {
         String path = "/payment-links/" + platformBillId;
         URL url = getURL(path);
-        HttpURLConnection connection = defaultConnection(url, "GET");
+        OkHttpClient client = new OkHttpClient().newBuilder().build();
+        Request request = new Request.Builder().url("https://sandbox.setu.co/api/payment-links/536938956881659249")
+                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
+                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
+                .method("GET", null).build();
+        Response response = client.newCall(request).execute();
         // output in json format
 
-        return new HashMap<>();
+        return response.body().string();
     }
 
-    public String mockPayment(double amount, String upiId) throws IOException, RequestException {
+    public String mockPayment(int amount, String upiId) throws IOException, RequestException {
         String path = "/triggers/funds/addCredit";
         URL url = getURL(path);
-        String jsonInputString = "{" +
-                "\"amount\" : \"" + amount + "\"," +
-                "\"destinationAccount\": { \"accountID\" : \"" + upiId + "\"}," +
-                "\"sourceAccount\": { \"accountID\" : \"customer@vpa\"}," +
-                "\"type\" : \"UPI\"" +
-                "\"}";
-        HttpURLConnection connection = defaultConnection(url, "POST");
-        // provide request body
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        int statusCode = connection.getResponseCode();
+        String jsonInputString = "{" + "\"amount\" :"  + amount + ","
+                + "\"destinationAccount\": { \"accountID\" : \"" + upiId + "\"},"
+                + "\"sourceAccount\": { \"accountID\" : \"customer@vpa\"}," + "\"type\" : \"UPI\"" + "\"}";
 
-        if (statusCode != 200) {
-            throw new RequestException("Mock request failed", "101", statusCode);
-        }
+        OkHttpClient client = new OkHttpClient().newBuilder().build();
+        RequestBody body = RequestBody.create(JSON, jsonInputString);
+        Request request = new Request.Builder().url(url.toString())
+                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
+                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
+                .method("POST", body).build();
+        Response response = client.newCall(request).execute();
 
+        if(response.code() != 200){
+            throw new RequestException("Request Failed", "101", response.code());
+        }
         return "Mock Success";
     }
 }
