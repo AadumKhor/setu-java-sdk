@@ -72,7 +72,6 @@ public class SetuRequestHelper {
 
     public String generateLink(int amount, int expiresInDays, String payeeName, String refId, String exactness)
             throws IOException {
-        StringBuilder res = new StringBuilder();
         String path = "/payment-links";
         URL url = getURL(path);
         LocalDateTime expiryDate = LocalDateTime.now().plusDays(expiresInDays);
