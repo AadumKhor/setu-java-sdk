@@ -1,15 +1,13 @@
+import com.google.gson.Gson;
 import exceptions.RequestException;
+import models.generate_link.GenerateLinkRequest;
+import models.generate_link.GenerateLinkResponse;
 import okhttp3.*;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,79 +38,48 @@ public class SetuRequestHelper {
         return url;
     }
 
-    private String validationRules(String exactness, double amount) {
-        String exactUp = "{\"amount\": " + "{\"maximum\" : \"0\", " + "\"minimum\": " + amount + "}}";
-        String exactDown = "{\"amount\":" + " {\"minimum\" : \"0\"," + " \"maximum\": " + amount + "}}";
-
-        if (exactness.equals("EXACT_UP")) {
-            return exactUp;
-        }
-        return exactDown;
-    }
-
-    private HashMap<String, String> generateSetuHeaders() {
-        HashMap<String, String> header = new HashMap<>();
-        header.put("Authorization", jwtHelper.yieldBearerToken());
-        header.put("X-Setu-Product-Instance-ID", productionInstance);
-        return header;
-    }
-
-    private HttpURLConnection defaultConnection(URL url, String method) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        HashMap<String, String> headers = generateSetuHeaders();
-        for (Map.Entry<String, String> me : headers.entrySet()) {
-            connection.setRequestProperty(me.getKey(), me.getValue());
-        }
-        connection.setRequestProperty("Content-Type", "application/json; utf-8");
-        connection.setRequestMethod(method);
-        connection.setDoInput(true);
-        connection.setDoOutput(true);
-        return connection;
-    }
-
-    public String generateLink(int amount, int expiresInDays, String payeeName, String refId, String exactness)
+    public GenerateLinkResponse generateLink(int amount, int expiresInDays, String payeeName, String refId, String exactness)
             throws IOException {
         String path = "/payment-links";
         URL url = getURL(path);
         LocalDateTime expiryDate = LocalDateTime.now().plusDays(expiresInDays);
         // input json
-        String jsonInputString = "{" + "\"amount\": {\"currencyCode\" : \"INR\", \"value\": " + amount + "},"
-                + "\"amountExactness\": \"" + exactness + "\"," + "\"billerBillID\": \"" + refId + "\","
-                + "\"dueDate\": \"" + expiryDate.toString() + "Z\"," + "\"expiryDate\": \"" + expiryDate.toString()
-                + "Z\"," + "\"name\": \"" + payeeName + "\"";
-
-        if (!exactness.equals("EXACT")) {
-            jsonInputString += ",\"validationRules\": " + validationRules(exactness, amount);
-        }
-        jsonInputString += "}";
+        String jsonInputString = new GenerateLinkRequest(amount,
+                expiryDate.toString(),
+                payeeName, refId,
+                exactness).generateLinkJson();
+        System.out.println(jsonInputString);
         OkHttpClient client = new OkHttpClient().newBuilder().build();
         RequestBody body = RequestBody.create(JSON, jsonInputString);
-        Request request = new Request.Builder().url("https://sandbox.setu.co/api/payment-links").method("POST", body)
+        Request request = new Request.Builder().url(url.toString())
+                .method("POST", body)
                 .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", jwtHelper.yieldBearerToken())
+                .addHeader("Content-Type", "application/json")
                 .build();
         Response response = client.newCall(request).execute();
-        return response.body().string();
+        return new Gson().fromJson(response.body().string(), GenerateLinkResponse.class);
     }
 
     public String checkStatus(String platformBillId) throws IOException {
         String path = "/payment-links/" + platformBillId;
         URL url = getURL(path);
         OkHttpClient client = new OkHttpClient().newBuilder().build();
-        Request request = new Request.Builder().url("https://sandbox.setu.co/api/payment-links/536938956881659249")
+        Request request = new Request.Builder()
+                .url(url.toString())
                 .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", jwtHelper.yieldBearerToken())
+                .addHeader("Content-Type", "application/json")
                 .method("GET", null).build();
         Response response = client.newCall(request).execute();
         // output in json format
-
         return response.body().string();
     }
 
     public String mockPayment(int amount, String upiId) throws IOException, RequestException {
         String path = "/triggers/funds/addCredit";
         URL url = getURL(path);
-        String jsonInputString = "{" + "\"amount\" :"  + amount + ","
+        String jsonInputString = "{" + "\"amount\" :" + amount + ","
                 + "\"destinationAccount\": { \"accountID\" : \"" + upiId + "\"},"
                 + "\"sourceAccount\": { \"accountID\" : \"customer@vpa\"}," + "\"type\" : \"UPI\"" + "\"}";
 
@@ -124,7 +91,7 @@ public class SetuRequestHelper {
                 .method("POST", body).build();
         Response response = client.newCall(request).execute();
 
-        if(response.code() != 200){
+        if (response.code() != 200) {
             throw new RequestException("Request Failed", "101", response.code());
         }
         return "Mock Success";
