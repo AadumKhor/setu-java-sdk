@@ -1,5 +1,6 @@
 import com.google.gson.Gson;
 import exceptions.RequestException;
+import models.MockPayment;
 import models.check_status.CheckStatusResponse;
 import models.generate_link.GenerateLinkRequest;
 import models.generate_link.GenerateLinkResponse;
@@ -80,15 +81,17 @@ public class SetuRequestHelper {
     public String mockPayment(int amount, String upiId) throws IOException, RequestException {
         String path = "/triggers/funds/addCredit";
         URL url = getURL(path);
-        String jsonInputString = "{" + "\"amount\" :" + amount + ","
-                + "\"destinationAccount\": { \"accountID\" : \"" + upiId + "\"},"
-                + "\"sourceAccount\": { \"accountID\" : \"customer@vpa\"}," + "\"type\" : \"UPI\"" + "\"}";
+
 
         OkHttpClient client = new OkHttpClient().newBuilder().build();
-        RequestBody body = RequestBody.create(JSON, jsonInputString);
-        Request request = new Request.Builder().url(url.toString())
+        String inputJson = new MockPayment(amount, upiId, "").getMockPaymentJson();
+        System.out.println(inputJson);
+        RequestBody body = RequestBody.create(JSON, inputJson);
+        Request request = new Request.Builder()
+                .url(url.toString())
                 .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken()).addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", jwtHelper.yieldBearerToken())
+                .addHeader("Content-Type", "application/json")
                 .method("POST", body).build();
         Response response = client.newCall(request).execute();
 

@@ -15,21 +15,20 @@ public class Main {
                 "418980734666016388",
                 false);
 
-//        GenerateLinkResponse response = setuRequestHelper.generateLink(1000,
-//                20,
-//                "TestingName",
-//                "ABNCD1234",
-//                "EXACT");
-//
-        CheckStatusResponse status = setuRequestHelper.checkStatus("543489248725042936");
-//        String mockPayment = setuRequestHelper.mockPayment(1000, "foodstreet536938956881659249@kaypay");
+        GenerateLinkResponse response = setuRequestHelper.generateLink(1000,
+                20,
+                "TestingName",
+                "ABNCD1234",
+                "EXACT");
+        CheckStatusResponse status = setuRequestHelper.checkStatus(response.getPlatformBillId());
+        System.out.println("UPI ID : " + status.getUpiID());
+        String mockPayment = setuRequestHelper.mockPayment(10, status.getUpiID());
 
-//        System.out.println("Response  = " + response.toString());
-//        System.out.println("-----------------------------");
+        System.out.println("Response  = " + response.toString());
+        System.out.println("-----------------------------");
         System.out.println("Status  = " + status);
         System.out.println("-----------------------------");
-//
-//        System.out.println("MockPayment  = " + mockPayment);
-//        System.out.println("-----------------------------");
+        System.out.println("MockPayment  = " + mockPayment);
+        System.out.println("-----------------------------");
     }
 }
