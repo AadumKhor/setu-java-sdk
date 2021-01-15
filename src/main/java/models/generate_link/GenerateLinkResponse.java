@@ -1,5 +1,7 @@
 package models.generate_link;
 
+import models.Error;
+
 import java.util.Objects;
 
 public class GenerateLinkResponse {

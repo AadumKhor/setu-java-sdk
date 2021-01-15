@@ -1,5 +1,6 @@
 import com.google.gson.Gson;
 import exceptions.RequestException;
+import models.check_status.CheckStatusResponse;
 import models.generate_link.GenerateLinkRequest;
 import models.generate_link.GenerateLinkResponse;
 import okhttp3.*;
@@ -61,7 +62,7 @@ public class SetuRequestHelper {
         return new Gson().fromJson(response.body().string(), GenerateLinkResponse.class);
     }
 
-    public String checkStatus(String platformBillId) throws IOException {
+    public CheckStatusResponse checkStatus(String platformBillId) throws IOException {
         String path = "/payment-links/" + platformBillId;
         URL url = getURL(path);
         OkHttpClient client = new OkHttpClient().newBuilder().build();
@@ -73,7 +74,7 @@ public class SetuRequestHelper {
                 .method("GET", null).build();
         Response response = client.newCall(request).execute();
         // output in json format
-        return response.body().string();
+        return new Gson().fromJson(response.body().string(), CheckStatusResponse.class);
     }
 
     public String mockPayment(int amount, String upiId) throws IOException, RequestException {

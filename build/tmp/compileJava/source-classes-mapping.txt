@@ -8,17 +8,21 @@ exceptions/AuthException.java
  exceptions.AuthException
 exceptions/RequestException.java
  exceptions.RequestException
-models/check_status/CheckStatusResponse.java
- models.check_status.CheckStatusResponse
+models/generate_link/Data.java
+ models.generate_link.Data
 models/generate_link/PaymentLink.java
  models.generate_link.PaymentLink
 models/generate_link/GenerateLinkResponse.java
  models.generate_link.GenerateLinkResponse
-models/generate_link/Error.java
- models.generate_link.Error
-models/generate_link/Data.java
- models.generate_link.Data
+models/Error.java
+ models.Error
+models/check_status/CheckStatusResponse.java
+ models.check_status.CheckStatusResponse
 Main.java
  Main
 SetuRequestHelper.java
  SetuRequestHelper
+models/check_status/Data.java
+ models.check_status.Data
+models/check_status/PaymentLink.java
+ models.check_status.PaymentLink

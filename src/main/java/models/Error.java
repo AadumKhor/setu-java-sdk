@@ -1,8 +1,8 @@
-package models.generate_link;
+package models;
 
 import java.util.List;
 
-class Error {
+public class Error {
     private final String code;
     private final String detail;
     private final String docURL;
