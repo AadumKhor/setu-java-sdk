@@ -2,7 +2,7 @@ package models;
 
 import java.util.List;
 
-public class Error {
+public class DeeplinkError {
     private final String code;
     private final String detail;
     private final String docURL;
@@ -10,9 +10,9 @@ public class Error {
     private final List<String> errors;
     private final String traceId;
 
-    private Error(String code, String detail,
-                  String docURL, String title,
-                  List<String> errors, String traceId) {
+    private DeeplinkError(String code, String detail,
+                          String docURL, String title,
+                          List<String> errors, String traceId) {
         this.code = code;
         this.detail = detail;
         this.docURL = docURL;

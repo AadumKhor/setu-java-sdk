@@ -17,9 +17,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SetuRequestHelper {
-    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private static final String setuHeader = "X-Setu-Product-Instance-ID";
+    private static final String authHeader = "Authorization";
+    private static final String contentTypeHeader = "Content-Type";
     private static final String PROD_URL = "https://prod.setu.co/api";
     private static final String SANDBOX_URL = "https://sandbox.setu.co/api";
+    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
     private final String productionInstance;
     private final Boolean isProduction;
 
@@ -43,6 +47,15 @@ public class SetuRequestHelper {
         return url;
     }
 
+    private Request buildRequest(String url, String method, RequestBody body) {
+        return new Request.Builder().url(url)
+                .method(method, body)
+                .addHeader(setuHeader, productionInstance)
+                .addHeader(authHeader, jwtHelper.yieldBearerToken())
+                .addHeader(contentTypeHeader, "application/json")
+                .build();
+    }
+
     public GenerateLinkResponse generateLink(int amount, int expiresInDays, String payeeName, String refId, String exactness)
             throws IOException {
         String path = "/payment-links";
@@ -53,15 +66,9 @@ public class SetuRequestHelper {
                 expiryDate.toString(),
                 payeeName, refId,
                 exactness).generateLinkJson();
-        System.out.println(jsonInputString);
         OkHttpClient client = new OkHttpClient().newBuilder().build();
         RequestBody body = RequestBody.create(JSON, jsonInputString);
-        Request request = new Request.Builder().url(url.toString())
-                .method("POST", body)
-                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken())
-                .addHeader("Content-Type", "application/json")
-                .build();
+        Request request = buildRequest(url.toString(), "POST", body);
         Response response = client.newCall(request).execute();
         return new Gson().fromJson(response.body().string(), GenerateLinkResponse.class);
     }
@@ -70,12 +77,7 @@ public class SetuRequestHelper {
         String path = "/payment-links/" + platformBillId;
         URL url = getURL(path);
         OkHttpClient client = new OkHttpClient().newBuilder().build();
-        Request request = new Request.Builder()
-                .url(url.toString())
-                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken())
-                .addHeader("Content-Type", "application/json")
-                .method("GET", null).build();
+        Request request = buildRequest(url.toString(), "GET", null);
         Response response = client.newCall(request).execute();
         // output in json format
         return new Gson().fromJson(response.body().string(), CheckStatusResponse.class);
@@ -90,12 +92,7 @@ public class SetuRequestHelper {
         String inputJson = new MockPayment(amount, upiId, "").getMockPaymentJson();
         System.out.println(inputJson);
         RequestBody body = RequestBody.create(JSON, inputJson);
-        Request request = new Request.Builder()
-                .url(url.toString())
-                .addHeader("X-Setu-Product-Instance-ID", productionInstance)
-                .addHeader("Authorization", jwtHelper.yieldBearerToken())
-                .addHeader("Content-Type", "application/json")
-                .method("POST", body).build();
+        Request request = buildRequest(url.toString(), "POST", body);
         Response response = client.newCall(request).execute();
 
         if (response.code() != 200) {
