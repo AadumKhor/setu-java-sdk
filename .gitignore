@@ -6,4 +6,3 @@ build
 .settings
 settings.gradle
 bin
-src/main/java/Main.java
