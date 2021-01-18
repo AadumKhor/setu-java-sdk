@@ -1,5 +1,8 @@
+package helpers;
+
 import com.google.gson.Gson;
 import exceptions.RequestException;
+import helpers.SetuJwtHelper;
 import models.MockPayment;
 import models.check_status.CheckStatusResponse;
 import models.generate_link.GenerateLinkRequest;
